@@ -1,0 +1,109 @@
+# Default configuration for MOEX quant platform
+
+data:
+  moex_iss:
+    base_url: "https://iss.moex.com/iss"
+    boards: ["TQBR"]
+    engines: ["stock"]
+    markets: ["shares"]
+    interval: 24  # daily candles
+    from_date: "2015-01-01"
+    till_date: "2026-08-01"
+    rate_limit_delay: 0.5  # seconds between requests
+    retry_attempts: 3
+    cache_dir: "data/raw/moex_cache"
+  
+  universe:
+    min_adv_63_rub: 50000000  # 50M RUB minimum average daily value
+    top_n_liquid: 50  # trade top N most liquid stocks
+    min_history_days: 252  # at least 1 year of history
+  
+  storage:
+    raw_dir: "data/raw"
+    processed_dir: "data/processed"
+    format: "parquet"
+    db_path: "data/processed/quant.db"  # DuckDB/SQLite path
+
+backtest:
+  horizon_days: 5  # main trading horizon
+  execution:
+    signal_time: "close"  # when signal is computed
+    trade_time: "next_open"  # when trade executes
+    entry_price: "open[T+1]"
+    exit_price: "open[T+1+H]"
+  
+  costs:
+    cost_bps_one_way: 12  # conservative estimate for liquid stocks
+    market_impact: false  # enable later if needed
+    impact_coefficient: 0.0  # bps * sqrt(order_value / ADV)
+  
+  constraints:
+    max_position_weight: 0.10  # 10% max per position
+    max_sector_weight: 0.30  # 30% max per sector
+    target_gross_exposure: 1.0  # 100% long
+    target_net_exposure: 1.0  # 100% net (long-only)
+    long_only: true
+  
+  rebalance:
+    frequency: "daily"  # daily rebalance
+    turnover_calculation: "half_sum_abs_diff"
+
+model:
+  baseline:
+    type: "lightgbm"
+    objective: "binary"
+    n_estimators: 300
+    learning_rate: 0.03
+    num_leaves: 31
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_samples: 100
+    reg_alpha: 0.1
+    reg_lambda: 0.1
+    random_seed: 42
+  
+  features:
+    momentum_windows: [5, 21, 63, 126]
+    volatility_windows: [21, 63]
+    volume_windows: [5, 21, 63]
+    winsorize_percentiles: [0.01, 0.99]
+  
+  label:
+    horizon: 5
+    execution: "next_open"
+    threshold_percentile: 0.60  # top 40% = 1
+
+splitting:
+  train_window_years: 4
+  validation_months: 3
+  test_months: 3
+  roll_period_months: 1
+  embargo_days: 5  # must be >= horizon
+
+metrics:
+  report_fields:
+    - "gross_sharpe"
+    - "net_sharpe"
+    - "annual_return"
+    - "max_drawdown"
+    - "turnover"
+    - "cost_drag"
+    - "rank_ic_mean"
+    - "rank_ic_tstat"
+    - "top_quintile_excess"
+    - "bottom_quintile_return"
+    - "sector_exposures"
+    - "top_positions"
+    - "pnl_by_year"
+    - "cost_sensitivity_x2"
+  
+  cost_sensitivity_bps: [8, 12, 20, 30]
+
+logging:
+  level: "INFO"
+  log_dir: "logs"
+  save_git_commit: true
+  save_config_hash: true
+  save_random_seed: true
+
+random_seed: 42
