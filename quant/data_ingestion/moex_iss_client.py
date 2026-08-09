@@ -80,6 +80,7 @@ class MOEXISSClient:
         all_rows = []
         start = 0
         limit = 100
+        columns = None
         
         while True:
             url = self._build_url(secid, from_date, till_date, start, limit)
@@ -88,8 +89,18 @@ class MOEXISSClient:
             if data is None:
                 break
             
-            # Extract history data
-            history_data = data.get("history", [])
+            # Extract history data - MOEX returns {"columns": [...], "data": [...]}
+            history = data.get("history", {})
+            if isinstance(history, dict):
+                history_data = history.get("data", [])
+                if columns is None:
+                    columns = history.get("columns", [])
+            elif isinstance(history, list):
+                # Fallback for old API format
+                history_data = history
+            else:
+                history_data = []
+            
             if not history_data:
                 break
             
@@ -105,7 +116,12 @@ class MOEXISSClient:
         if not all_rows:
             return None
         
-        df = pd.DataFrame(all_rows)
+        # Convert to DataFrame using columns
+        if columns:
+            df = pd.DataFrame(all_rows, columns=columns)
+        else:
+            df = pd.DataFrame(all_rows)
+        
         return df
     
     def fetch_multiple_securities(
