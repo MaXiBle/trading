@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+src/backtest/__init__.py
+src/backtest/engine.py
+src/data_ingestion/__init__.py
+src/data_ingestion/moex_ingestion.py
+src/data_ingestion/trading_calendar.py
+src/moex_research_platform.egg-info/PKG-INFO
+src/moex_research_platform.egg-info/SOURCES.txt
+src/moex_research_platform.egg-info/dependency_links.txt
+src/moex_research_platform.egg-info/requires.txt
+src/moex_research_platform.egg-info/top_level.txt
+src/utils/__init__.py
+src/utils/config.py
