@@ -1,0 +1,95 @@
+# Phase 0 Platform Configuration
+# MOEX Research / Backtest Platform
+
+experiment: phase0_platform
+data_version: v1
+
+# Market settings
+market:
+  exchange: MOEX
+  board: TQBR
+  currency: RUB
+  timezone: Europe/Moscow
+
+# Data ingestion
+ingestion:
+  moex_iss:
+    base_url: "https://iss.moex.com/iss"
+    history_interval: 24  # daily
+    start_date: "2010-01-01"
+    retry_attempts: 3
+    retry_delay_sec: 5
+    request_timeout_sec: 30
+
+# Trading calendar
+calendar:
+  min_date: "2010-01-01"
+  max_date: "2030-12-31"
+  exchange_holidays_path: "configs/moex_holidays.csv"
+
+# Universe builder
+universe:
+  min_history_days: 252
+  min_adv_63: 5000000  # 5M RUB average daily value
+  max_universe_size: 50
+  liquidity_lookback_days: 63
+
+# Corporate actions
+corporate_actions:
+  adjust_prices: true
+  adjust_volume: true
+  min_adjust_factor: 0.001
+  max_adjust_factor: 1000.0
+
+# Data quality
+data_quality:
+  price_floor: 0.01
+  price_ceiling: 1000000
+  volume_floor: 0
+  max_daily_return: 0.99
+  min_traded_value: 100000  # 100K RUB
+
+# Walk-forward splitter
+splitter:
+  train_window_days: 1260  # ~5 years
+  validation_window_days: 63  # ~3 months
+  test_window_days: 21  # ~1 month
+  step_days: 21
+  embargo_days: 5
+
+# Cost model
+cost_model:
+  commission_bps: 5
+  spread_bps: 5
+  slippage_bps: 2
+  total_cost_bps: 12  # one-way
+
+# Backtester
+backtest:
+  initial_capital: 1000000  # 1M RUB
+  long_only: true
+  gross_exposure: 1.0
+  max_position_pct: 0.10
+  rebalance_frequency_days: 5
+
+# Metrics
+metrics:
+  horizons: [1, 5, 20]
+  risk_free_rate: 0.10  # annual
+  trading_days_per_year: 252
+
+# Paths
+paths:
+  raw_data: "data/raw"
+  curated_data: "data/curated"
+  features: "data/features"
+  labels: "data/labels"
+  predictions: "data/predictions"
+  backtests: "data/backtests"
+  reports: "reports"
+
+# Reproducibility
+reproducibility:
+  random_seed: 42
+  save_git_commit: true
+  save_config_hash: true
