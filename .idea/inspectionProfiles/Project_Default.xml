@@ -1,0 +1,24 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="opencv-python" />
+          <option value="mediapipe" />
+          <option value="pyautogui" />
+          <option value="numpy" />
+          <option value="scikit-learn" />
+          <option value="protobuf" />
+          <option value="gradio-rangeslider" />
+          <option value="gradio" />
+          <option value="onnx" />
+          <option value="onnxruntime" />
+          <option value="psutil" />
+          <option value="tqdm" />
+          <option value="scipy" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
