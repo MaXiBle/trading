@@ -7,15 +7,15 @@ Usage:
 
 import argparse
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
-# Add project root to path
+# Add project root to path for local imports
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.utils.config import load_config
-from src.data_ingestion.moex_ingestion import ingest_moex_data
+from src.data_ingestion.moex_ingestion import ingest_moex_data  # noqa: E402
+from src.utils.config import load_config  # noqa: E402
 
 
 def main():
@@ -44,21 +44,21 @@ def main():
         action="store_true",
         help="Enable verbose logging",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Setup logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    
+
     # Load configuration
     config_path = project_root / args.config
     logger = logging.getLogger(__name__)
     logger.info(f"Loading configuration from {config_path}")
-    
+
     try:
         config = load_config(config_path)
     except FileNotFoundError as e:
@@ -67,38 +67,38 @@ def main():
     except Exception as e:
         logger.error(f"Failed to load config: {e}")
         sys.exit(1)
-    
+
     # Determine output directory
     output_dir = None
     if args.output_dir:
         output_dir = Path(args.output_dir)
     else:
         output_dir = project_root / config.paths.raw_data / "moex" / "history" / config.market.board
-    
+
     # Run ingestion
-    logger.info(f"Starting MOEX data ingestion...")
+    logger.info("Starting MOEX data ingestion...")
     logger.info(f"Output directory: {output_dir}")
-    
+
     results = ingest_moex_data(
         config=config.ingestion,
         output_dir=output_dir,
         securities=args.securities,
     )
-    
+
     if results:
         logger.info(f"Successfully ingested {len(results)} securities")
-        
+
         # Summary
         total_rows = sum(len(df) for df in results.values())
         logger.info(f"Total rows: {total_rows}")
-        
+
         date_ranges = {}
         for secid, df in results.items():
             if not df.empty and "trade_date" in df.columns:
                 min_date = df["trade_date"].min()
                 max_date = df["trade_date"].max()
                 date_ranges[secid] = (min_date, max_date)
-        
+
         logger.info("Date ranges:")
         for secid, (min_date, max_date) in list(date_ranges.items())[:5]:
             logger.info(f"  {secid}: {min_date.date()} to {max_date.date()}")

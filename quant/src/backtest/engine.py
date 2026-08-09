@@ -1,8 +1,7 @@
 """Backtest engine for the research platform."""
 
 import logging
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -29,7 +28,7 @@ class BacktestResult:
     positions: pd.DataFrame
     trades: pd.DataFrame
     metrics: dict
-    
+
     def summary(self) -> str:
         """Generate summary statistics."""
         lines = [
@@ -47,29 +46,29 @@ class BacktestResult:
 
 class Backtester:
     """Simple event-driven backtester for long-only strategies."""
-    
-    def __init__(self, config: Optional[BacktestConfig] = None):
+
+    def __init__(self, config: BacktestConfig | None = None):
         """Initialize backtester.
-        
+
         Args:
             config: Backtest configuration.
         """
         self.config = config or BacktestConfig()
-        self.results: Optional[BacktestResult] = None
-    
+        self.results: BacktestResult | None = None
+
     def run(
         self,
         signals: pd.DataFrame,
         returns: pd.DataFrame,
-        prices: Optional[pd.DataFrame] = None,
+        prices: pd.DataFrame | None = None,
     ) -> BacktestResult:
         """Run backtest.
-        
+
         Args:
             signals: DataFrame of signals (Date × Ticker) with values in [0, 1].
             returns: DataFrame of forward returns (Date × Ticker).
             prices: Optional DataFrame of prices for trade simulation.
-            
+
         Returns:
             BacktestResult with portfolio returns and metrics.
         """
@@ -77,23 +76,23 @@ class Backtester:
         common_dates = signals.index.intersection(returns.index)
         signals = signals.loc[common_dates]
         returns = returns.loc[common_dates]
-        
+
         # Normalize signals to portfolio weights
         weights = self._normalize_signals(signals)
-        
+
         # Calculate portfolio returns
         portfolio_returns = (weights * returns).sum(axis=1)
-        
+
         # Apply transaction costs
         if self.config.cost_bps > 0:
             turnover = self._calculate_turnover(weights)
             costs = turnover * (self.config.cost_bps / 10000)
             portfolio_returns = portfolio_returns - costs
-        
+
         # Calculate cumulative returns and portfolio values
         cum_returns = (1 + portfolio_returns).cumprod()
         portfolio_values = self.config.initial_capital * cum_returns
-        
+
         # Generate positions DataFrame
         positions = weights * portfolio_values.values[:, np.newaxis]
         positions = pd.DataFrame(
@@ -101,13 +100,13 @@ class Backtester:
             index=weights.index,
             columns=weights.columns,
         )
-        
+
         # Generate trades DataFrame (simplified)
         trades = self._generate_trades(weights, prices)
-        
+
         # Calculate metrics
         metrics = self._calculate_metrics(portfolio_returns, portfolio_values)
-        
+
         self.results = BacktestResult(
             portfolio_returns=portfolio_returns,
             portfolio_values=portfolio_values,
@@ -115,31 +114,31 @@ class Backtester:
             trades=trades,
             metrics=metrics,
         )
-        
+
         return self.results
-    
+
     def _normalize_signals(self, signals: pd.DataFrame) -> pd.DataFrame:
         """Normalize signals to portfolio weights.
-        
+
         Args:
             signals: Raw signals.
-            
+
         Returns:
             Normalized weights summing to gross_exposure.
         """
         # Zero out negative signals for long-only
         if self.config.long_only:
             signals = signals.clip(lower=0)
-        
+
         # Sum across assets for each date
         signal_sum = signals.sum(axis=1)
-        
+
         # Avoid division by zero
         signal_sum = signal_sum.replace(0, np.nan)
-        
+
         # Normalize to gross exposure
         weights = signals.div(signal_sum, axis=0) * self.config.gross_exposure
-        
+
         # Apply max position constraint with iterative clip and renormalize
         if self.config.max_position_pct < 1.0:
             for _ in range(10):  # Max iterations to converge
@@ -152,36 +151,36 @@ class Backtester:
                 # Check if all weights are within bounds
                 if (weights <= self.config.max_position_pct + 1e-9).all().all():
                     break
-        
+
         # Fill NaN with 0 (no position)
         weights = weights.fillna(0)
-        
+
         return weights
-    
+
     def _calculate_turnover(self, weights: pd.DataFrame) -> pd.Series:
         """Calculate turnover between periods.
-        
+
         Turnover = 0.5 * sum(|w_new - w_old|)
         """
         weight_diff = weights.diff().abs().sum(axis=1)
         turnover = 0.5 * weight_diff.fillna(0)
         return turnover
-    
+
     def _generate_trades(
         self,
         weights: pd.DataFrame,
-        prices: Optional[pd.DataFrame],
+        prices: pd.DataFrame | None,
     ) -> pd.DataFrame:
         """Generate trades DataFrame."""
         # Simplified: just record weight changes as trades
         trades = weights.diff().fillna(0)
-        
+
         if prices is not None:
             # Could add more detailed trade simulation here
             pass
-        
+
         return trades
-    
+
     def _calculate_metrics(
         self,
         returns: pd.Series,
@@ -189,37 +188,34 @@ class Backtester:
     ) -> dict:
         """Calculate performance metrics."""
         trading_days_per_year = 252
-        
+
         # Total return
         total_return = values.iloc[-1] / values.iloc[0] - 1
-        
+
         # Annualized return
         n_years = len(returns) / trading_days_per_year
         if n_years > 0:
             annualized_return = (values.iloc[-1] / values.iloc[0]) ** (1 / n_years) - 1
         else:
             annualized_return = 0.0
-        
+
         # Volatility
         volatility = returns.std()
         volatility_annual = volatility * np.sqrt(trading_days_per_year)
-        
+
         # Sharpe ratio (assuming 10% risk-free rate)
         risk_free_rate = 0.10
         excess_return = annualized_return - risk_free_rate
-        if volatility_annual > 0:
-            sharpe_ratio = excess_return / volatility_annual
-        else:
-            sharpe_ratio = 0.0
-        
+        sharpe_ratio = excess_return / volatility_annual if volatility_annual > 0 else 0.0
+
         # Maximum drawdown
         running_max = values.cummax()
         drawdown = (values - running_max) / running_max
         max_drawdown = drawdown.min()
-        
+
         # Total trades
         total_trades = (returns != 0).sum()
-        
+
         return {
             "total_return": total_return,
             "annualized_return": annualized_return,
@@ -231,36 +227,36 @@ class Backtester:
         }
 
 
-def run_dummy_backtest(config: Optional[BacktestConfig] = None) -> BacktestResult:
+def run_dummy_backtest(config: BacktestConfig | None = None) -> BacktestResult:
     """Run a dummy backtest to verify the platform.
-    
+
     Creates synthetic signals and returns for testing.
-    
+
     Args:
         config: Backtest configuration.
-        
+
     Returns:
         BacktestResult from dummy run.
     """
     np.random.seed(42)
-    
+
     # Generate synthetic data
     dates = pd.date_range("2020-01-01", "2023-12-31", freq="B")
     tickers = ["TICKER_" + str(i) for i in range(10)]
-    
+
     # Random returns with slight positive drift
     returns_data = np.random.randn(len(dates), len(tickers)) * 0.02 + 0.0005
     returns = pd.DataFrame(returns_data, index=dates, columns=tickers)
-    
+
     # Random signals
     signals_data = np.random.rand(len(dates), len(tickers))
     signals = pd.DataFrame(signals_data, index=dates, columns=tickers)
-    
+
     # Run backtest
     backtester = Backtester(config)
     result = backtester.run(signals, returns)
-    
+
     logger.info("Dummy backtest completed:")
     logger.info(result.summary())
-    
+
     return result

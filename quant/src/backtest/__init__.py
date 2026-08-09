@@ -1,6 +1,6 @@
 """Backtest package."""
 
-from .engine import Backtester, BacktestConfig, BacktestResult, run_dummy_backtest
+from .engine import BacktestConfig, Backtester, BacktestResult, run_dummy_backtest
 
 __all__ = [
     "Backtester",

@@ -1,7 +1,6 @@
 """Configuration loader and validator for the platform."""
 
 from pathlib import Path
-from typing import Any, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -24,7 +23,7 @@ class IngestionConfig(BaseModel):
         retry_attempts: int = 3
         retry_delay_sec: int = 5
         request_timeout_sec: int = 30
-    
+
     moex_iss: MOEXISS = Field(default_factory=MOEXISS)
 
 
@@ -32,7 +31,7 @@ class CalendarConfig(BaseModel):
     """Trading calendar configuration."""
     min_date: str = "2010-01-01"
     max_date: str = "2030-12-31"
-    exchange_holidays_path: Optional[str] = None
+    exchange_holidays_path: str | None = None
 
 
 class UniverseConfig(BaseModel):
@@ -131,20 +130,20 @@ class PlatformConfig(BaseModel):
 
 def load_config(config_path: str | Path) -> PlatformConfig:
     """Load configuration from YAML file.
-    
+
     Args:
         config_path: Path to YAML configuration file.
-        
+
     Returns:
         Validated PlatformConfig object.
     """
     config_path = Path(config_path)
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
-    
-    with open(config_path, "r", encoding="utf-8") as f:
+
+    with open(config_path, encoding="utf-8") as f:
         config_dict = yaml.safe_load(f)
-    
+
     return PlatformConfig(**config_dict)
 
 
@@ -153,21 +152,21 @@ def get_project_root() -> Path:
     return Path(__file__).parent.parent.parent
 
 
-def resolve_path(path: str, base_dir: Optional[Path] = None) -> Path:
+def resolve_path(path: str, base_dir: Path | None = None) -> Path:
     """Resolve a path relative to project root or base directory.
-    
+
     Args:
         path: Relative or absolute path string.
         base_dir: Base directory for relative paths. Defaults to project root.
-        
+
     Returns:
         Absolute Path object.
     """
     if base_dir is None:
         base_dir = get_project_root()
-    
+
     resolved = Path(path)
     if not resolved.is_absolute():
         resolved = base_dir / resolved
-    
+
     return resolved.resolve()
